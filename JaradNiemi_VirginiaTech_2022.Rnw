@@ -2,7 +2,7 @@
 \usepackage{natbib}
 \usepackage{pdfpages}
 \usepackage{tikz}
-% \usepackage[ruled,vlined,linesnumbered,resetcount]{algorithm2e}
+\usepackage[ruled,vlined,linesnumbered,resetcount]{algorithm2e}
 
 \usetheme{AnnArbor}
 \usecolortheme{beaver}
@@ -550,156 +550,345 @@ There are a number of questions:
 \end{frame}
 
 
+\begin{frame}
+\frametitle{Simultaneous knot optimization}
+\setkeys{Gin}{width=0.7\textwidth}
+\includegraphics{normal_example}
+\end{frame}
+
+\begin{frame}
+\frametitle{Adding another knot}
+\setkeys{Gin}{width=0.7\textwidth}
+\includegraphics{normal_marginal_ll}
+\end{frame}
+
+
+
 
 \transitionslide{OAT Algorithm}
 
 
+\section{One-at-a-time (OAT) selection}
+\begin{frame}
+\frametitle{Knot selection algorithm}
+
+Algorithm 1. OAT knot selection algorithm. Convergence in the repeat loop is declared when the change in the objective function, the log-marginal likelihood, falls below a threshold. Set initial number of knots ($K_I$).
+
+\pause
+
+\begin{algorithm}[H]
+\SetAlgoLined
+\textbf{Initialize:} $x^{\dagger} = \{x^{\dagger}_i \}_{i = 1}^{K_{I}}$ \pause \;
+$\hat{\theta} = \mbox{argmax}_{\theta} p(y|x, x^{\dagger}, \theta)$ \pause \;
+\Repeat{$|x^{\dagger}| = K_{max}$ or convergence}{
+propose new knot $x^{\dagger^*} \leftarrow J(y , x, x^{\dagger}, \hat{\theta})$ \pause \;
+$(\hat{x}^{\dagger^*}, \hat{\theta}) = \mbox{argmax}_{(x^{\dagger^*}, \theta)} p(y|x, \{x^{\dagger}, x^{\dagger^*}\}, \theta)$ \pause \;
+$x^{\dagger} = \{x^{\dagger}, \hat{x}^{\dagger^*}\}$ \;
+}
+\end{algorithm}
+\end{frame}
 
 
-% 
-% 
-% 
-% \subsection{One-at-a-time (OAT) selection}
-% \begin{frame}
-% \frametitle{One-at-a-time (OAT) selection}
-% We developed a \alert{one-at-a-time (OAT) knot selection} that 
-% \begin{itemize}
-% \item Begins with a small number of knots
-% \item Optimizes the knot locations according to the marginal likelihood or variational objective function
-% \item Iteratively adds knots until no improvement is seen in the objective function
-% \end{itemize}
-% 
-% \vspace{0.2in} \pause
-% 
-% Summary of results:
-% \begin{itemize}
-% \item Prediction is equivalent to Full GP and simultaneous knot optimization
-% \item Formally, OAT has computational complexity of $\mathcal{O}(NK^2)$
-% \item Practically, OAT is much faster than Full GP and simultaneous knot optimization
-% \end{itemize}
-% 
-% \vspace{0.2in} \pause
-% 
-% Manuscripts:
-% \begin{itemize}
-% \item Nate Garton, Jarad Niemi, and Alicia Carriquiry. (2020) ``\href{https://onlinelibrary.wiley.com/doi/full/10.1002/sam.11459}{Knot Selection in Sparse Gaussian Processes with a Variational Objective.}’’ Statistical Analysis and Data Mining. 13(4): 324-336.
-% \item Nate Garton, Jarad Niemi, and Alicia Carriquiry. ``\href{https://arxiv.org/abs/2002.09538}{Knot Selection in Sparse Gaussian processes.}’’ arXiv:2002.09538
-% \end{itemize}
-% 
-% \end{frame}
-% 
-% 
-% \transitionslide{Functional inputs}
-% 
-% 
-% % \subsection{Boston Housing}
-% % \begin{frame}
-% % \frametitle{Boston Housing}
-% % 
-% % 490 observations (random 80\% for training) with $d=3$
-% % 
-% % \vspace{0.2in} \pause
-% % 
-% % \begin{tabular}{|l|r|r|l|r|r|r|}
-% % \hline
-% % Method & Runtime & K & Tmax & SRMSE & MNLP & AUKL\\
-% % \hline
-% % Full & 394 & -- & -- & 0.359 & 2.500 & 0.000\\
-% % \hline
-% % OAT-BO & 545 & 13 & 25 & 0.366 & 2.466 & 0.045\\
-% % \hline
-% % OAT-RS & 356 & 12 & 25 & 0.366 & 2.464 & 0.039\\
-% % \hline
-% % OAT-RS & 339 & 15 & 50 & 0.364 & 2.469 & 0.047\\
-% % \hline
-% % Simult. & 25831 & 50 & -- & 0.378 & 2.291 & 0.356\\
-% % \hline
-% % Simult. & 3945 & 13 & -- & 0.356 & 2.313 & 0.242\\
-% % \hline
-% % \end{tabular}
-% % 
-% % \end{frame}
-% 
-% 
-% 
-% 
-% \begin{frame}
-% \frametitle{Vector-input Gaussian Process (viGP)}
-% 
-% For observation $i$, we have response $Y_i \in \R$ and
-% input $X_i = (X_{i,1},\ldots,X_{i,D})$.
-% \pause
-% Our computer model is $f()$ with $Y_i = f(X_i)$.
-% 
-% \vspace{0.1in} \pause
-% 
-% Assume $f$ is a zero-mean Gaussian process with
-% \[ Cov(Y_i,Y_j) = \sigma^2 e^{-\frac{1}{2} D(X_i, X_j, \omega)} \]
-% \pause
-% and
-% \[
-% D(X_i, X_j, \omega) = \sum_{d = 1}^{D}{\omega_d (x_{i, d} - x_{j, d})^2}.
-% \]
-% Some call this \alert{automatic relevance determination}. 
-% \end{frame}
-% 
-% 
-% 
-% 
-% \begin{frame}
-%   \frametitle{Functional-input Gaussian Process}
-% 
-% For observation $i$, we have $Y_i \in \R$ and $X_i(t)$ for $t \in [0,T]$.
-% \pause
-% Our computer model is $f()$ with $Y_i = f(X_i(t))$.
-% 
-% \vspace{0.1in} \pause
-% 
-% The functional-input Gaussian Process has
-% 
-% \[ Cov(Y_i,Y_j) = \sigma^2 e^{-\frac{1}{2} D(X_i(t), X_j(t), \omega)} \]
-% \pause
-% \[ D(X_i, X_j, \omega) = \int_0^T \omega(t) (X_i(t) - X_j(t))^2 dt \pause
-% \approx \sum_{d=1}^D \omega(t_d) (X_i(t_d) - X_j(t_d))^2. \]
-% \pause
-% For the \alert{functional length-scale},
-% we assume
-% \[
-% \omega(t) = \exp\left( 2 \sigma_\ell^2 t^\eta \right).
-% \]
-% 
-% \pause
-% 
-% We'll refer to this as \alert{fiGP} and 
-% \alert{dynamic automatic relevance determination}.
-% 
-% \end{frame}
-% 
-% 
-% 
-% 
-% \begin{frame}
-%   \frametitle{Theoretical fiGP functional length-scale}
-% 
-%   \begin{figure}
-%       \begin{center}
-%           \includegraphics[width=\textwidth,height=0.8\textheight,keepaspectratio]{02-alf-weight-plot}
-%       \end{center}
-%   \end{figure}
-% \end{frame}
-% 
-% 
-% 
-% \begin{frame}
-%   \frametitle{Estimated fiGP functional length-scale}
-% 
-%   \begin{figure}
-%       \begin{center}
-%           \includegraphics[width=\textwidth,height=0.8\textheight,keepaspectratio]{weights-all}
-%       \end{center}
-%   \end{figure}
-% \end{frame}
-% 
+
+
+\begin{frame}
+\frametitle{Bayesian optimization}
+
+Let 
+\begin{itemize}
+\item $w_{1:t-1}$ be the vector of log-marginal likelihood values at the candidates for the knot proposal which have thus far been explored at time $t$ and
+\item $w^{+} = \max(w_{1:t-1})$.
+\end{itemize}
+
+\vspace{0.1in} \pause
+
+Let $W(z)$ be the unknown marginal likelihood at input location $z$ and
+model it using a GP, for clarity call this the \alert{meta GP}.
+
+\vspace{0.2in} \pause
+
+Then expected improvement is 
+{\small
+\[
+\begin{array}{ll}
+% \alpha \left(z;w_{1:t-1}, \left\{x_1^\dagger,\ldots,x_{t-1}^\dagger\right\} \right) 
+E[\max(W(z)-w^+,0)]
+= & (E\left[W(z)|w_{1:t-1}\right] - w^{+})\Phi\left(\frac{E\left[W(z)|w_{1:t-1}\right] - w^{+}}{\sqrt{ V\left[W(z)|w_{1:t-1} \right] } } \right) \\
+& + \sqrt{ V\left[W(z)|w_{1:t-1}\right] }\phi \left(\frac{E\left[W(z)|w_{1:t-1}\right] - w^{+}}{\sqrt{ V\left[W(z)|w_{1:t-1}\right] } } \right).
+\end{array}
+\]
+}
+where $\phi$ and $\Phi$ are the pdf and cdf of a standard normal, respectively.
+
+\vspace{0.1in} \pause
+
+{\tiny
+\citep{jones2001, shahriari2016}
+}
+
+\end{frame}
+
+
+
+\begin{frame}
+\frametitle{Knot proposal algorithm}
+
+Algorithm 2. Knot proposal algorithm.
+Set the minimum ($T_{min}$) and maximum ($T_{max}$) number of marginal
+likelihood evaluations.
+
+\pause
+
+{\small
+\begin{algorithm}[H]
+\SetAlgoLined
+set the mean of the meta GP equal to 
+$\log p\left(y\left|x,\left\{x^{\dagger},\cdot\right\}, \hat{\theta}\right.\right)$ \pause \;
+sample $x_1^\dagger, ..., x^\dagger_{T_{min}}$ without replacement from $x$ \pause \;
+% $\{ x_i \}_{i = 1}^{n}$ \;
+
+% $z \leftarrow \{z_1, ..., z_{T_{min}} \} \cup x^{\dagger} $ \;
+augment known marginal likelihood values 
+$w_j = \log p\left(y\left|x,\left\{x^{\dagger},x^{\dagger}_j\right\}, \hat{\theta}\right.\right)$ for $j=1,\ldots,k$ 
+with evaluations of the marginal likelihood at the new knots, 
+that is $w_{k+j} = \log p\left(y\left|x, \left\{x^{\dagger},x^\dagger_j\right\}, \hat{\theta}\right.\right)$ for $j = 1,...,T_{min}$ \pause \;
+% $t \leftarrow T_{min}$ \;
+% \jarad{don't need to set this here because it is set in the loop}
+\For{$t = T_{min}+1, ..., T_{max}$}{
+update covariance parameters in meta GP \pause \;
+$x^*_t = \mbox{argmax}_{z \in x \setminus \{x^{\dagger}_l\}_{l = 1}^{t - 1} } \alpha\left(z;w,\left\{x_1^\dagger,\ldots,x_{t-1}^\dagger\right\}\right)$ \pause \;
+$w_t = \log p\left(y\left|x, \left\{x^{\dagger}, x^*_t \right\}, \hat{\theta}\right.\right)$ \pause \;
+}
+return $x_j^*$ such that $j=\mbox{argmax}_t \, w_t$
+\end{algorithm}
+}
+\end{frame}
+
+
+\begin{frame}
+\frametitle{Knot selection algorithm}
+
+Algorithm 1. OAT knot selection algorithm. Convergence in the repeat loop is declared when the change in the objective function, the log-marginal likelihood, falls below a threshold. Set 
+initial number of knots ($K_I$).
+
+\begin{algorithm}[H]
+\SetAlgoLined
+\textbf{Initialize:} $x^{\dagger} = \{x^{\dagger}_i \}_{i = 1}^{K_{I}}$  \;
+$\hat{\theta} = \mbox{argmax}_{\theta} p(y|x, x^{\dagger}, \theta)$  \;
+\Repeat{$|x^{\dagger}| = K_{max}$ or convergence}{
+propose new knot $x^{\dagger^*} \leftarrow J(y , x, x^{\dagger}, \hat{\theta})$ \;
+$(\hat{x}^{\dagger^*}, \hat{\theta}) = \mbox{argmax}_{(x^{\dagger^*}, \theta)} p(y|x, \{x^{\dagger}, x^{\dagger^*}\}, \theta)$ \;
+$x^{\dagger} = \{x^{\dagger}, \hat{x}^{\dagger^*}\}$ \;
+}
+\end{algorithm}
+\end{frame}
+
+
+
+\begin{frame}
+\frametitle{One-D Gaussian data}
+\setkeys{Gin}{width=\textwidth}
+\includegraphics[width=0.7\textwidth]{oat_vs_simult_gaussian_example}
+
+Starting locations: evenly spaced (left), adversarial (middle), random (right)
+
+Algorithm: OAT (top) and simultaneous (bottom)
+
+\end{frame}
+
+
+\begin{frame}
+\frametitle{Computational results}
+\begin{tabular}{|l|l|r|r|r|r|r|}
+\hline
+Method & Initialization & K & RMSE & Runtime & GA Steps & log-Likelihood\\
+\hline
+Full GP & -- & -- & 0.192 & -- & -- & -311.720\\
+\hline
+OAT & Uniform & 13 & 0.180 & 50 & 464 & -308.120\\
+\hline
+OAT & Adversarial & 22 & 0.228 & 96 & 669 & -308.587\\
+\hline
+OAT & Random & 13 & 0.228 & 50 & 470 & -308.225\\
+\hline
+Simult. & Uniform & 13 & 0.220 & 140 & 212 & -306.852\\
+\hline
+Simult. & Adversarial & 22 & 0.196 & 700 & 529 & -308.398\\
+\hline
+Simult. & Random & 13 & 0.247 & 88 & 140 & -308.071\\
+\hline
+\end{tabular}
+\end{frame}
+
+
+\section{Applications}
+\begin{frame}
+\frametitle{Performance metrics}
+
+All data models:
+\[ 
+MNLP = \text{median}_{i \in 1, ..., N_{test}} \{ -\log p(\tilde{y}_i|x^{\dagger}, \hat{\theta}, y) \}.
+\]
+
+\vspace{0.2in}
+
+\[ 
+AUKL = \frac{1}{N_{test}} \sum_{i = 1}^{N_{test}}\int p_{full}(f(\tilde{x}_i)|\hat{\theta}, y) \log \frac{p_{full}(f(\tilde{x}_i)|\hat{\theta}, y)}{p_{sparse}(f(\tilde{x}_i)|x^{\dagger}, \hat{\theta}, y)} df(\tilde{x}_i).
+\]
+
+\vspace{0.2in} \pause
+
+Gaussian:
+\[ SRMSE = \sigma_{\tilde{y}}^{-1} \sqrt{ \frac{1}{N_{test}} \sum_{i = 1}^{N_{test}} (E\left[f(\tilde{x}_i)|Y\right] - \tilde{y}_i )^2}, \]
+where $\sigma_{\tilde{y}}^2 = \frac{1}{N_{test} - 1}\sum_{i = 1}^{N_{test}}(\tilde{y}_i - \ubar{\tilde{y}})^2$, $\ubar{\tilde{y}} = \frac{1}{N_{test}} \sum_{i = 1}^{N_{test}}\tilde{y}_i$, and $\tilde{y}$ is the vector of test set target values.
+\end{frame}
+
+
+
+\subsection{Boston Housing}
+\begin{frame}
+\frametitle{Boston Housing}
+
+490 observations (random 80\% for training) with $d=3$
+
+\vspace{0.2in} \pause
+
+\begin{tabular}{|l|r|r|l|r|r|r|}
+\hline
+Method & Runtime & K & Tmax & SRMSE & MNLP & AUKL\\
+\hline
+Full & 394 & -- & -- & 0.359 & 2.500 & 0.000\\
+\hline
+OAT-BO & 545 & 13 & 25 & 0.366 & 2.466 & 0.045\\
+\hline
+OAT-RS & 356 & 12 & 25 & 0.366 & 2.464 & 0.039\\
+\hline
+OAT-RS & 339 & 15 & 50 & 0.364 & 2.469 & 0.047\\
+\hline
+Simult. & 25831 & 50 & -- & 0.378 & 2.291 & 0.356\\
+\hline
+Simult. & 3945 & 13 & -- & 0.356 & 2.313 & 0.242\\
+\hline
+\end{tabular}
+
+\end{frame}
+
+
+
+
+
+
+
+
+\subsection{One-at-a-time (OAT) selection}
+\begin{frame}
+\frametitle{One-at-a-time (OAT) selection}
+We developed a \alert{one-at-a-time (OAT) knot selection} that
+\begin{itemize}
+\item Begins with a small number of knots
+\item Optimizes the knot locations according to the marginal likelihood or variational objective function
+\item Iteratively adds knots until no improvement is seen in the objective function
+\end{itemize}
+
+\vspace{0.2in} \pause
+
+Summary of results:
+\begin{itemize}
+\item Prediction is equivalent to Full GP and simultaneous knot optimization
+\item Formally, OAT has computational complexity of $\mathcal{O}(NK^2)$
+\item Practically, OAT is much faster than Full GP and simultaneous knot optimization
+\end{itemize}
+
+\vspace{0.2in} \pause
+
+Manuscripts:
+\begin{itemize}
+\item Nate Garton, Jarad Niemi, and Alicia Carriquiry. (2020) ``\href{https://onlinelibrary.wiley.com/doi/full/10.1002/sam.11459}{Knot Selection in Sparse Gaussian Processes with a Variational Objective.}’’ Statistical Analysis and Data Mining. 13(4): 324-336.
+\item Nate Garton, Jarad Niemi, and Alicia Carriquiry. ``\href{https://arxiv.org/abs/2002.09538}{Knot Selection in Sparse Gaussian processes.}’’ arXiv:2002.09538
+\end{itemize}
+
+\end{frame}
+
+
+\transitionslide{Functional inputs}
+
+\begin{frame}
+\frametitle{Vector-input Gaussian Process (viGP)}
+
+For observation $i$, we have response $Y_i \in \R$ and
+input $X_i = (X_{i,1},\ldots,X_{i,D})$.
+\pause
+Our computer model is $f()$ with $Y_i = f(X_i)$.
+
+\vspace{0.1in} \pause
+
+Assume $f$ is a zero-mean Gaussian process with
+\[ Cov(Y_i,Y_j) = \sigma^2 e^{-\frac{1}{2} D(X_i, X_j, \omega)} \]
+\pause
+and
+\[
+D(X_i, X_j, \omega) = \sum_{d = 1}^{D}{\omega_d (x_{i, d} - x_{j, d})^2}.
+\]
+Some call this \alert{automatic relevance determination}.
+\end{frame}
+
+
+
+
+\begin{frame}
+  \frametitle{Functional-input Gaussian Process}
+
+For observation $i$, we have $Y_i \in \R$ and $X_i(t)$ for $t \in [0,T]$.
+\pause
+Our computer model is $f()$ with $Y_i = f(X_i(t))$.
+
+\vspace{0.1in} \pause
+
+The functional-input Gaussian Process has
+
+\[ Cov(Y_i,Y_j) = \sigma^2 e^{-\frac{1}{2} D(X_i(t), X_j(t), \omega)} \]
+\pause
+\[ D(X_i, X_j, \omega) = \int_0^T \omega(t) (X_i(t) - X_j(t))^2 dt \pause
+\approx \sum_{d=1}^D \omega(t_d) (X_i(t_d) - X_j(t_d))^2. \]
+\pause
+For the \alert{functional length-scale},
+we assume
+\[
+\omega(t) = \exp\left( 2 \sigma_\ell^2 t^\eta \right).
+\]
+
+\pause
+
+We'll refer to this as \alert{fiGP} and
+\alert{dynamic automatic relevance determination}.
+
+\end{frame}
+
+
+
+
+\begin{frame}
+  \frametitle{Theoretical fiGP functional length-scale}
+
+  \begin{figure}
+      \begin{center}
+          \includegraphics[width=\textwidth,height=0.8\textheight,keepaspectratio]{02-alf-weight-plot}
+      \end{center}
+  \end{figure}
+\end{frame}
+
+
+
+\begin{frame}
+  \frametitle{Estimated fiGP functional length-scale}
+
+  \begin{figure}
+      \begin{center}
+          \includegraphics[width=\textwidth,height=0.8\textheight,keepaspectratio]{weights-all}
+      \end{center}
+  \end{figure}
+\end{frame}
+
 % 
 % \begin{frame}
 %   \frametitle{Summary}
@@ -734,5 +923,14 @@ There are a number of questions:
 %   \end{itemize}
 % \end{frame}
 
+\appendix
+\backupbegin
+
+\begin{frame}
+\frametitle{References}
+\scriptsize
+\bibliography{references}
+\bibliographystyle{plainnat}
+\end{frame}
 
 \end{document}
