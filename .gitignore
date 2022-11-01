@@ -45,3 +45,5 @@ vignettes/*.pdf
 *.snm
 *.synctex.gz
 *.toc
+*.bbl
+
