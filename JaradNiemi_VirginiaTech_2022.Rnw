@@ -1,0 +1,738 @@
+\documentclass[10pt,aspectratio=169,handout]{beamer}
+\usepackage{natbib}
+\usepackage{pdfpages}
+\usepackage{tikz}
+% \usepackage[ruled,vlined,linesnumbered,resetcount]{algorithm2e}
+
+\usetheme{AnnArbor}
+\usecolortheme{beaver}
+
+\definecolor{Cardinal}{RGB}{200,16,46}
+
+% \usetikzlibrary{arrows.meta,positioning}
+
+\graphicspath{{include/}}
+
+\usepackage[export]{adjustbox}
+
+\setlength{\unitlength}{\textwidth}  % measure in textwidths
+\usepackage[normalem]{ulem}
+
+% to avoid counting all pages
+\newcommand{\backupbegin}{
+   \newcounter{finalframe}
+   \setcounter{finalframe}{\value{framenumber}}
+}
+\newcommand{\backupend}{
+   \setcounter{framenumber}{\value{finalframe}}
+}
+
+\newcommand{\transitionslide}[1]{
+{
+% \setbeamertemplate{navigation symbols}{} 
+\setbeamercolor{background canvas}{bg=Cardinal}
+\setbeamercolor{normal text}{fg=white}
+\usebeamercolor[fg]{normal text}
+\begin{frame}[plain]
+
+\begin{center}
+{\Huge #1}
+\end{center}
+
+\end{frame}
+}
+}
+
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{itemize items}[default]
+% \setbeamertemplate{itemize subitem}{\alph{enumii}.}
+% \setbeamertemplate{itemize subsubitem}{\roman{enumiii}.}
+\setkeys{Gin}{width=0.6\textwidth}
+
+% Reference and link colors
+\hypersetup{
+  colorlinks  = false,
+  linkcolor   = blue,
+  urlcolor    = blue,
+  citecolor   = blue,
+  anchorcolor = blue
+}
+
+% Math commands
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\I}{\mathrm{I}}
+\newcommand{\ind}{\stackrel{ind}{\sim}}
+\providecommand{\ov}[1]{\overline{#1}}
+\newcommand{\ubar}[1]{\text{\b{$#1$}}}
+
+\usefonttheme[onlymath]{serif} % uncomment for article style math
+
+\institute[ISU]{Iowa State University}
+\date{\today}
+
+\title{Toward Statistical Emulators of Agricultural Computer Models}
+\author{Jarad Niemi}
+
+<<options, results='hide', echo=FALSE, purl=FALSE>>=
+opts_chunk$set(comment=NA,
+               fig.width=6, fig.height=5,
+               size='tiny',
+               out.width='0.8\\textwidth',
+               fig.align='center',
+               message = FALSE,
+               echo = FALSE,
+               cache = TRUE)
+options(width=120)
+@
+
+<<libraries, message=FALSE, warning=FALSE>>=
+library("tidyverse")
+library("mvtnorm")
+@
+
+<<set_seed, echo=FALSE>>=
+set.seed(20210611)
+@
+
+\begin{document}
+
+% JN ---------------------------------------------------------------------------
+
+\begin{frame}
+
+  \maketitle
+  \vspace{0.2in} \pause
+
+  {\footnotesize
+    Funded, in part, by
+    \begin{itemize}
+      \item[-] the Iowa State University Presidential Interdisciplinary
+      Research Initiative on C-CHANGE: Science for a Changing Agriculture
+      \item[-] USDA NIFA: \href{https://cris.nifa.usda.gov/cgi-bin/starfinder/0?path=fastlink1.txt&id=anon&pass=&search=R=88415&format=WEBLINK}{Consortium for Cultivating Human And Naturally reGenerative Enterprises (C-CHANGE Grass2Gas)}
+      \item[-] Foundation for Food and Agriculture Research: \href{https://foundationfar.org/2019/04/01/ffar-grant-improves-soil-health-and-increases-farm-sustainability/}{Prairie Strips for Healthy Soils and Thriving Farms}
+    \end{itemize}
+  }
+
+\end{frame}
+
+
+
+\begin{frame}
+\frametitle{Collaborators}
+Prairie STRIPS Collaborators: \url{http://prairiestrips.org/people}
+
+\vspace{0.2in} \pause
+
+Gaussian Process Emulators:
+
+\vspace{0.2in}
+
+\begin{columns}
+\begin{column}{0.24\textwidth}
+\adjincludegraphics[trim = {{.2\width} 0 {.2\width} {.2\height}}, clip, width=0.7\textwidth]{nate_garton}
+\end{column}
+\begin{column}{0.24\textwidth}
+\includegraphics[width=0.7\textwidth]{alicia_carriquiry} \pause
+\end{column}
+\begin{column}{0.24\textwidth}
+\includegraphics[width=0.7\textwidth]{luis_damiano}
+\end{column}
+\begin{column}{0.24\textwidth}
+\includegraphics[width=0.7\textwidth]{ben_neo}
+\end{column}
+\end{columns}
+
+\end{frame}
+
+
+\section{Effects of agriculture}
+\transitionslide{Agriculture}
+
+\begin{frame}
+\frametitle{Corn Belt}
+
+\includegraphics[width=\textwidth]{iowa-corn}
+
+{\tiny \url{https://www.rma.usda.gov/en/RMALocal/Iowa}}
+\end{frame}
+
+
+\subsection{Production}
+\begin{frame}
+\frametitle{Iowa Agricultural Production}
+
+{\tiny \url{https://www.iadg.com/iowa-advantages/target-industries/}}
+
+\begin{quote}
+Iowa is the largest producer of corn, pork and eggs in the United States and
+second in soybeans and red meat production.
+\end{quote}
+
+\vspace{0.2in}
+
+\includegraphics[height=0.3\textheight, width=0.19\textwidth, trim = 0 0 0 50, clip]{corn}
+\includegraphics[height=0.3\textheight, width=0.19\textwidth, trim = 0 0 250 0, clip]{hogs}
+\includegraphics[height=0.3\textheight, width=0.19\textwidth]{eggs}
+\includegraphics[height=0.3\textheight, width=0.19\textwidth]{soybeans}
+\includegraphics[height=0.3\textheight, width=0.19\textwidth, trim = 0 100 0 100, clip]{cows}
+
+\vspace{0.2in}
+
+{\tiny
+\url{https://www.britannica.com/plant/corn-plant}
+
+\url{https://www.nationalhogfarmer.com/marketing/total-pork-production-2014-down-slightly}
+
+\url{https://www.medicalnewstoday.com/articles/283659}
+
+\url{https://www.midwestfarmreport.com/2019/12/11/state-soybean-yield-contest-entries-announced/}
+
+\url{https://www.scientificamerican.com/article/meat-and-environment/}
+}
+
+\end{frame}
+
+
+
+\begin{frame}
+\frametitle{Agriculture Impact on Climate Change}
+
+\includegraphics[width=0.5\textwidth]{GHG2022inset}
+
+{\tiny \url{https://www.ers.usda.gov/topics/natural-resources-environment/climate-change/}}
+\end{frame}
+
+
+
+
+
+
+
+% 
+% 
+% 
+% \begin{frame}[t]
+% \frametitle{Corn production}
+% \includegraphics[width=0.49\textwidth]{farmland}
+% \includegraphics[width=0.49\textwidth]{corn_yield}
+% 
+% {\tiny \url{https://www.iowaagliteracy.org/Article/Family-Farms-Then-and-Now}}
+% 
+% {\tiny \url{https://extension.entm.purdue.edu/newsletters/pestandcrop/article/historical-corn-grain-yields-in-the-u-s/}}
+% \end{frame}
+% 
+
+\subsection{Dead zone}
+\begin{frame}
+\frametitle{Gulf of Mexico Dead Zone}
+\setkeys{Gin}{width=0.9\textwidth}
+
+\includegraphics{dead_zone}
+
+{\tiny \url{https://www.noaa.gov/media-release/gulf-of-mexico-dead-zone-is-largest-ever-measured}}
+\end{frame}
+
+
+\subsection{Soil loss}
+\begin{frame}
+\frametitle{Soil loss}
+
+Iowa loses \$1,000,000,000/year in soil
+
+\vspace{0.2in}
+
+\includegraphics[width=0.7\textwidth]{soil_loss}
+
+{\tiny
+\url{https://www.desmoinesregister.com/story/money/agriculture/2014/05/03/erosion-estimated-cost-iowa-billion-yield/8682651/}
+}
+
+\end{frame}
+
+
+% 
+% 
+% 
+% 
+% % \subsection{Des Moines Water Works Lawsuit}
+% % \begin{frame}
+% % \frametitle{Des Moines Water Works Lawsuit}
+% % \setkeys{Gin}{width=0.7\textwidth}
+% % 
+% % \includegraphics{des_moines_water_works_lawsuit}
+% % 
+% % {\tiny \url{https://www.lwvumrr.org/blog/des-moines-water-works-lawsuit-update}}
+% % 
+% % \end{frame}
+% 
+% 
+% 
+% 
+\section{C-CHANGE}
+\transitionslide{C-CHANGE}
+
+
+\begin{frame}[t]
+\frametitle{C-CHANGE: Science for a changing agriculture}
+
+\begin{columns}[T]
+\begin{column}{0.35\textwidth}
+\includegraphics[width=\textwidth]{cchange}
+\url{http://agchange.org} \pause
+\end{column}
+\begin{column}{0.45\textwidth}
+Prairie STRIPS
+
+C-CHANGE PIRI
+
+C-CHANGE Grass2Gas
+
+Climate Smart Ag
+% \begin{itemize}
+% \item Prairie STRIPS
+% \item C-CHANGE PIRI
+% \item C-CHANGE Grass2Gas
+% \item Climate Smart Ag
+% \end{itemize}
+\end{column}
+\end{columns}
+\end{frame}
+
+
+\begin{frame}[t]
+\frametitle{Prairie STRIPS in Conservation Reserve Program}
+
+\only<2->{
+\includegraphics[width=0.8\textwidth]{pnas_title}
+}
+
+\vspace{0.1in}
+
+\begin{columns}
+\begin{column}{0.5\textwidth}
+\vspace{0pt}
+\adjincludegraphics[trim={0 0 0 {.2\height}}, clip, width=\textwidth]{strips_field}
+\end{column}
+\begin{column}{0.5\textwidth}
+\vspace{0pt}
+\only<3->{
+\includegraphics[width=\textwidth]{cp-43}
+}
+\end{column}
+\end{columns}
+\end{frame}
+
+
+
+
+% 
+% 
+% \subsection{STRIPS1}
+% \begin{frame}
+% \frametitle{STRIPS1 - Neal Smith National Wildlife Refuge}
+% \begin{columns}
+% \begin{column}{0.5\textwidth}
+% \adjincludegraphics[trim={{.4\width} 0 0 {.57\height}}, clip, width=\textwidth]{map}
+% \href{https://www.google.com/maps/place/Neal+Smith+National+Wildlife+Refuge/@41.5475331,-93.2686897,3219m/data=!3m1!1e3!4m5!3m4!1s0x87eee81ce3a71817:0xc745a0b0aed9e495!8m2!3d41.5652684!4d-93.2766143}{Find on Google Maps} \pause
+% \end{column}
+% \begin{column}{0.5\textwidth}
+% \includegraphics[width=\textwidth]{treatments}
+% 
+% \vspace{0.5in} \pause
+% 
+% \includegraphics[width=\textwidth]{design}
+% \end{column}
+% \end{columns}
+% \end{frame}
+% 
+% 
+% \begin{frame}[t]
+% \frametitle{STRIPS1 - Science}
+% \begin{columns}
+% \begin{column}{0.6\textwidth}
+% \onslide<2->{\includegraphics[width=\textwidth]{strips_overview}}
+% \vspace{0.1in}
+% \end{column}
+% \begin{column}{0.4\textwidth}
+% \onslide<3->{\includegraphics[width=\textwidth]{flumes}}
+% \end{column}
+% \end{columns}
+% \end{frame}
+% 
+% 
+% \begin{frame}
+% \frametitle{STRIPS1 - PNAS}
+% \adjincludegraphics[trim={0 {.785\height} 0 0}, clip, width=\textwidth]{pnas_fig}
+% 
+% \pause
+% 
+% \adjincludegraphics[trim={0 0 0 {.653\height}}, clip, width=\textwidth]{pnas_fig}
+% \end{frame}
+% 
+% 
+% 
+% 
+% 
+% 
+% 
+% 
+% 
+% 
+% 
+
+\subsection{Daily Erosion Project}
+\begin{frame}
+\frametitle{Daily Erosion Project (DEP)}
+\framesubtitle{using Water Erosion Prediction Project (WEPP)}
+
+\includegraphics[width=0.49\textwidth,trim={0 0 0 2.5cm},clip]{dep_precip}
+\includegraphics[width=0.49\textwidth,trim={0 0 0 2.5cm},clip]{dep_soil_loss}
+
+\end{frame}
+
+
+
+\subsection{WEPP}
+\begin{frame}
+  \frametitle{Water Erosion Prediction Project (WEPP)}
+
+  \begin{figure}
+      \begin{center}
+          \includegraphics[width=\textwidth,height=0.8\textheight,keepaspectratio]{wepp}
+      \end{center}
+  \end{figure}
+\end{frame}
+
+
+
+\transitionslide{Gaussian Process Emulators}
+
+
+\section{Emulators}
+
+
+
+\begin{frame}
+\frametitle{Gaussian Process Emulators}
+Consider a deterministic computer model $f(\cdot)$ with
+\[
+Y_i
+% = f(X_i, \psi)
+= f(X_i), \quad i=1,\ldots,N
+\]
+
+where
+\begin{itemize}
+% \item $\psi$ are model parameters,
+\item $X_i$ are inputs and
+\item $Y_i$ are outputs.
+\end{itemize}
+
+We assume a Gaussian Process prior
+\[ f \sim \mathcal{GP}\left(m, k \right) \implies Y \sim N(m_x, \Sigma) \]
+where (often) $m_x = 0$ \pause and, for scalar inputs,
+$\Sigma_{ij} = k(x_i,x_j) = \sigma^2 e^{-(x_i-x_j)^2/\phi}$.
+
+\vspace{0.1in} \pause
+
+Two research directions:
+\begin{itemize}
+\item Computational tractability for large $N$
+\item Dealing with functional inputs
+\end{itemize}
+\end{frame}
+
+
+
+
+\subsection{Training a GP}
+\begin{frame}
+\frametitle{Training a GP}
+
+Find the maximum likelihood estimator (MLE) for $\theta = (\sigma^2,\phi)$,
+
+\[
+\hat{\theta} = \mbox{argmax}_\theta \, p(y|\theta)
+= \mbox{argmax}_{\theta} \, N\left(y; 0, \Sigma(\theta)\right)
+\]
+
+where $y=(y_1,\ldots,y_N)$.
+
+\vspace{0.2in}
+
+The log-likelihood is
+\[
+\log \mathcal{N}(y; 0, \Sigma(\theta) \propto C
+- \log | \Sigma(\theta)|
+- y^\top \Sigma(\theta)^{-1} y
+\]
+
+\pause
+
+If there are $N$ observations,
+$\Sigma(\theta)$ is an $N\times N$ covariance matrix \pause
+and thus the computational time scales as $\mathcal{O}(N^3)$.
+
+\vspace{0.2in} \pause
+
+This is doable if $N\approx 1,000$ but not when you start getting larger
+and larger data sets.
+\end{frame}
+
+
+
+
+
+
+\subsection{Sparse GPs using knots}
+\begin{frame}
+\frametitle{Fully Independent Conditional (FIC) Approximation}
+
+Introduce a set of knots $x^{\dagger} = \left\{x_1^\dagger, \ldots, x_K^\dagger \right\}$ with $K<<N$,
+\pause
+such that
+\[
+p(f_x,f_{x^{\dagger}}|\theta) = p(f_x|f_{x^{\dagger}}, \theta) p(f_{x^{\dagger}}|\theta)
+\]
+\pause
+where
+\[ \begin{array}{rl}
+f_{x^{\dagger}}| \theta &\sim  \mathcal{N}(0, \Sigma_{x^{\dagger}x^{\dagger}}) \pause \\
+f_x| f_{x^{\dagger}} , \theta  &\sim  \mathcal{N}\left(\Sigma_{xx^{\dagger}} \Sigma_{x^{\dagger}x^{\dagger}}^{-1}(f_{x^{\dagger}}) , \Lambda \right)
+\end{array} \]
+\pause
+with $\Lambda = \text{diag}\left(\Sigma_{xx} - \Sigma_{x x^{\dagger}} \Sigma_{x^{\dagger}x^{\dagger}}^{-1} \Sigma_{x^{\dagger}x}\right)$.
+
+\vspace{0.2in} \pause
+
+This joint implies the following marginal distribution for $f_x$:
+\[
+f_x| \theta \sim \mathcal{N}(0, \Lambda + \Sigma_{x x^{\dagger}} \Sigma_{x^{\dagger}x^{\dagger}}^{-1} \Sigma_{x^{\dagger}x})
+\]
+\pause
+which has the correct marginal means and variances,
+but the covariances are controlled by the knots.
+
+\vspace{0.1in} \pause
+
+% {\tiny
+% \citep{seeger2003, candela2005, snelson2006, banerjee2008, finley2009, titsias2009, cao2013}
+% }
+
+\end{frame}
+
+
+\begin{frame}
+\frametitle{Train FIC Model}
+
+Let $\Psi(x^\dagger, \theta) \equiv \Lambda(\theta) + \Sigma_{x x^{\dagger}}(\theta) \Sigma_{x^{\dagger}x^{\dagger}}(\theta)^{-1}\Sigma_{x^{\dagger}x}(\theta)$,
+then
+\[
+Y|x^{\dagger}, \theta\sim \mathcal{N}(0, \Psi(x^\dagger, \theta) ).
+\]
+
+\vspace{0.2in} \pause
+
+Train the model by finding
+\[
+\hat{x}^\dagger,\hat\theta = \mbox{argmax}_{x^\dagger,\theta} \mathcal{N}(y; 0, \Psi(x^\dagger, \theta)).
+\]
+\pause
+which has computational complexity of $\mathcal{O}(NK^2)$.
+\vspace{0.2in} \pause
+
+There are a number of questions:
+\begin{itemize}
+\item how many knots are needed?
+\item where should the knots be?
+\end{itemize}
+\end{frame}
+
+
+
+\transitionslide{OAT Algorithm}
+
+
+
+
+% 
+% 
+% 
+% \subsection{One-at-a-time (OAT) selection}
+% \begin{frame}
+% \frametitle{One-at-a-time (OAT) selection}
+% We developed a \alert{one-at-a-time (OAT) knot selection} that 
+% \begin{itemize}
+% \item Begins with a small number of knots
+% \item Optimizes the knot locations according to the marginal likelihood or variational objective function
+% \item Iteratively adds knots until no improvement is seen in the objective function
+% \end{itemize}
+% 
+% \vspace{0.2in} \pause
+% 
+% Summary of results:
+% \begin{itemize}
+% \item Prediction is equivalent to Full GP and simultaneous knot optimization
+% \item Formally, OAT has computational complexity of $\mathcal{O}(NK^2)$
+% \item Practically, OAT is much faster than Full GP and simultaneous knot optimization
+% \end{itemize}
+% 
+% \vspace{0.2in} \pause
+% 
+% Manuscripts:
+% \begin{itemize}
+% \item Nate Garton, Jarad Niemi, and Alicia Carriquiry. (2020) ``\href{https://onlinelibrary.wiley.com/doi/full/10.1002/sam.11459}{Knot Selection in Sparse Gaussian Processes with a Variational Objective.}’’ Statistical Analysis and Data Mining. 13(4): 324-336.
+% \item Nate Garton, Jarad Niemi, and Alicia Carriquiry. ``\href{https://arxiv.org/abs/2002.09538}{Knot Selection in Sparse Gaussian processes.}’’ arXiv:2002.09538
+% \end{itemize}
+% 
+% \end{frame}
+% 
+% 
+% \transitionslide{Functional inputs}
+% 
+% 
+% % \subsection{Boston Housing}
+% % \begin{frame}
+% % \frametitle{Boston Housing}
+% % 
+% % 490 observations (random 80\% for training) with $d=3$
+% % 
+% % \vspace{0.2in} \pause
+% % 
+% % \begin{tabular}{|l|r|r|l|r|r|r|}
+% % \hline
+% % Method & Runtime & K & Tmax & SRMSE & MNLP & AUKL\\
+% % \hline
+% % Full & 394 & -- & -- & 0.359 & 2.500 & 0.000\\
+% % \hline
+% % OAT-BO & 545 & 13 & 25 & 0.366 & 2.466 & 0.045\\
+% % \hline
+% % OAT-RS & 356 & 12 & 25 & 0.366 & 2.464 & 0.039\\
+% % \hline
+% % OAT-RS & 339 & 15 & 50 & 0.364 & 2.469 & 0.047\\
+% % \hline
+% % Simult. & 25831 & 50 & -- & 0.378 & 2.291 & 0.356\\
+% % \hline
+% % Simult. & 3945 & 13 & -- & 0.356 & 2.313 & 0.242\\
+% % \hline
+% % \end{tabular}
+% % 
+% % \end{frame}
+% 
+% 
+% 
+% 
+% \begin{frame}
+% \frametitle{Vector-input Gaussian Process (viGP)}
+% 
+% For observation $i$, we have response $Y_i \in \R$ and
+% input $X_i = (X_{i,1},\ldots,X_{i,D})$.
+% \pause
+% Our computer model is $f()$ with $Y_i = f(X_i)$.
+% 
+% \vspace{0.1in} \pause
+% 
+% Assume $f$ is a zero-mean Gaussian process with
+% \[ Cov(Y_i,Y_j) = \sigma^2 e^{-\frac{1}{2} D(X_i, X_j, \omega)} \]
+% \pause
+% and
+% \[
+% D(X_i, X_j, \omega) = \sum_{d = 1}^{D}{\omega_d (x_{i, d} - x_{j, d})^2}.
+% \]
+% Some call this \alert{automatic relevance determination}. 
+% \end{frame}
+% 
+% 
+% 
+% 
+% \begin{frame}
+%   \frametitle{Functional-input Gaussian Process}
+% 
+% For observation $i$, we have $Y_i \in \R$ and $X_i(t)$ for $t \in [0,T]$.
+% \pause
+% Our computer model is $f()$ with $Y_i = f(X_i(t))$.
+% 
+% \vspace{0.1in} \pause
+% 
+% The functional-input Gaussian Process has
+% 
+% \[ Cov(Y_i,Y_j) = \sigma^2 e^{-\frac{1}{2} D(X_i(t), X_j(t), \omega)} \]
+% \pause
+% \[ D(X_i, X_j, \omega) = \int_0^T \omega(t) (X_i(t) - X_j(t))^2 dt \pause
+% \approx \sum_{d=1}^D \omega(t_d) (X_i(t_d) - X_j(t_d))^2. \]
+% \pause
+% For the \alert{functional length-scale},
+% we assume
+% \[
+% \omega(t) = \exp\left( 2 \sigma_\ell^2 t^\eta \right).
+% \]
+% 
+% \pause
+% 
+% We'll refer to this as \alert{fiGP} and 
+% \alert{dynamic automatic relevance determination}.
+% 
+% \end{frame}
+% 
+% 
+% 
+% 
+% \begin{frame}
+%   \frametitle{Theoretical fiGP functional length-scale}
+% 
+%   \begin{figure}
+%       \begin{center}
+%           \includegraphics[width=\textwidth,height=0.8\textheight,keepaspectratio]{02-alf-weight-plot}
+%       \end{center}
+%   \end{figure}
+% \end{frame}
+% 
+% 
+% 
+% \begin{frame}
+%   \frametitle{Estimated fiGP functional length-scale}
+% 
+%   \begin{figure}
+%       \begin{center}
+%           \includegraphics[width=\textwidth,height=0.8\textheight,keepaspectratio]{weights-all}
+%       \end{center}
+%   \end{figure}
+% \end{frame}
+% 
+% 
+% \begin{frame}
+%   \frametitle{Summary}
+% 
+%   Research/policy advances
+%   \begin{itemize}
+%   \item Prairie strips impact on agroecosystem services and inclusion in CRP as CP-43
+%   \item OAT algorithm for knot selection to deal with computational intractability due to large $n$
+%   \item fiGP/DARD model for functional inputs
+%   \end{itemize}
+% 
+%   \vspace{0.1in} \pause
+% 
+%   These slides are available at
+%   \begin{itemize}
+%     \item \url{https://github.com/jarad/ISU2022}
+%     \item \url{http://www.jarad.me/research/presentations.html}
+%   \end{itemize}
+% 
+%   \vspace{0.1in} \pause
+% 
+%   \begin{center}
+%     {\Large
+%       Thank you!
+%     }
+%   \end{center}
+% 
+%   Other links:
+%   \begin{itemize}
+%     \item \url{http://www.jarad.me/}
+%     \item \url{http://www.youtube.com/jaradniemi}
+%   \end{itemize}
+% \end{frame}
+
+
+\end{document}
