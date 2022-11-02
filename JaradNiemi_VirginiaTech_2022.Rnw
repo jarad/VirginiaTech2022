@@ -4,6 +4,8 @@
 \usepackage{tikz}
 \usepackage[ruled,vlined,linesnumbered,resetcount]{algorithm2e}
 
+\includeonlyframes{current}
+
 \usetheme{AnnArbor}
 \usecolortheme{beaver}
 
@@ -76,8 +78,8 @@
 
 <<options, results='hide', echo=FALSE, purl=FALSE>>=
 opts_chunk$set(comment=NA,
-               fig.width=6, fig.height=5,
-               size='tiny',
+               fig.width=9, fig.height=5,
+               size='normalsize',
                out.width='0.8\\textwidth',
                fig.align='center',
                message = FALSE,
@@ -406,7 +408,54 @@ Climate Smart Ag
 
 
 
-\transitionslide{Gaussian Process Emulators}
+\subsection{WEPPR}
+\begin{frame}[fragile]
+\frametitle{WEPPR}
+R packages:
+\begin{itemize}
+\item {\tt WEPPR}: R interface for WEPP computer model
+\item {\tt DEPR}: R interface for DEP/WEPP computer model
+\item {\tt WEPPemulator}: utility features for emulator construction
+\end{itemize}
+
+\vspace{0.1in}
+
+<<WEPPRplots, echo=TRUE, eval=FALSE>>=
+library("WEPPR")
+library("tidyverse")
+library("gridExtra")
+
+slp <- read_slp(system.file("extdata", "071000090603_2.slp", package="WEPPR"))
+cli <- read_cli(system.file("extdata", "092.63x040.90.cli", package="WEPPR"))
+
+grid.arrange(plot(slp, plots="slope"), 
+             plot(slp, plots="elevation"), 
+             plot(cli), 
+             layout_matrix = rbind(1:2,3))
+@
+\end{frame}
+
+
+\begin{frame}
+\frametitle{WEPPR Plots}
+<<echo=FALSE>>=
+<<WEPPRplots>>
+@
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{WEPPR Plots}
+
+\vspace{-0.2in}
+
+<<echo=TRUE,fig.height=4>>=
+sol <- read_sol(system.file("extdata", "071000090603_2.sol", package="WEPPR"))
+plot(merge_slp_sol(slp,sol))
+@
+\end{frame}
+
+
+\transitionslide{Gaussian Process}
 
 
 \section{Emulators}
@@ -414,12 +463,12 @@ Climate Smart Ag
 
 
 \begin{frame}
-\frametitle{Gaussian Process Emulators}
-Consider a deterministic computer model $f(\cdot)$ with
+\frametitle{Gaussian Process (GPs)}
+Consider a computer model $f(\cdot)$ with
 \[
 Y_i
 % = f(X_i, \psi)
-= f(X_i), \quad i=1,\ldots,N
+= f(X_i) + \epsilon_i, \quad i=1,\ldots,N
 \]
 
 where
@@ -430,7 +479,7 @@ where
 \end{itemize}
 
 We assume a Gaussian Process prior
-\[ f \sim \mathcal{GP}\left(m, k \right) \implies Y \sim N(m_x, \Sigma) \]
+\[ f \sim \mathcal{GP}\left(m, k \right) \implies Y \sim N(m_x, \Sigma+\tau^2 \mathrm{I}) \]
 where (often) $m_x = 0$ \pause and, for scalar inputs,
 $\Sigma_{ij} = k(x_i,x_j) = \sigma^2 e^{-(x_i-x_j)^2/\phi}$.
 
@@ -450,7 +499,8 @@ Two research directions:
 \begin{frame}
 \frametitle{Training a GP}
 
-Find the maximum likelihood estimator (MLE) for $\theta = (\sigma^2,\phi)$,
+Find the maximum likelihood estimator (MLE) for
+$\theta = (\sigma^2,\phi,\tau^2)$,
 
 \[
 \hat{\theta} = \mbox{argmax}_\theta \, p(y|\theta)
@@ -478,6 +528,7 @@ and thus the computational time scales as $\mathcal{O}(N^3)$.
 
 This is doable if $N\approx 1,000$ but not when you start getting larger
 and larger data sets.
+% ?? Gaussian Processes Meets Big Data
 \end{frame}
 
 
@@ -516,9 +567,9 @@ but the covariances are controlled by the knots.
 
 \vspace{0.1in} \pause
 
-% {\tiny
-% \citep{seeger2003, candela2005, snelson2006, banerjee2008, finley2009, titsias2009, cao2013}
-% }
+{\tiny
+\citep{seeger2003, candela2005, snelson2006, banerjee2008, finley2009, titsias2009, cao2013}
+}
 
 \end{frame}
 
@@ -566,8 +617,6 @@ There are a number of questions:
 
 
 \transitionslide{OAT Algorithm}
-
-
 \section{One-at-a-time (OAT) selection}
 \begin{frame}
 \frametitle{Knot selection algorithm}
@@ -612,7 +661,7 @@ Then expected improvement is
 \[
 \begin{array}{ll}
 % \alpha \left(z;w_{1:t-1}, \left\{x_1^\dagger,\ldots,x_{t-1}^\dagger\right\} \right) 
-E[\max(W(z)-w^+,0)]
+\alpha\left(z;x_{1:t-1}^\dagger,w_{1:t-1}\right) = E[\max(W(z)-w^+,0)]
 = & (E\left[W(z)|w_{1:t-1}\right] - w^{+})\Phi\left(\frac{E\left[W(z)|w_{1:t-1}\right] - w^{+}}{\sqrt{ V\left[W(z)|w_{1:t-1} \right] } } \right) \\
 & + \sqrt{ V\left[W(z)|w_{1:t-1}\right] }\phi \left(\frac{E\left[W(z)|w_{1:t-1}\right] - w^{+}}{\sqrt{ V\left[W(z)|w_{1:t-1}\right] } } \right).
 \end{array}
@@ -656,7 +705,7 @@ that is $w_{k+j} = \log p\left(y\left|x, \left\{x^{\dagger},x^\dagger_j\right\},
 % \jarad{don't need to set this here because it is set in the loop}
 \For{$t = T_{min}+1, ..., T_{max}$}{
 update covariance parameters in meta GP \pause \;
-$x^*_t = \mbox{argmax}_{z \in x \setminus \{x^{\dagger}_l\}_{l = 1}^{t - 1} } \alpha\left(z;w,\left\{x_1^\dagger,\ldots,x_{t-1}^\dagger\right\}\right)$ \pause \;
+$x^*_t = \mbox{argmax}_{z \in x \setminus x^{\dagger}_{1:t-1}} \alpha\left(z;x_{1:t-1}^\dagger,w_{1:t-1}\right)$ \pause \;
 $w_t = \log p\left(y\left|x, \left\{x^{\dagger}, x^*_t \right\}, \hat{\theta}\right.\right)$ \pause \;
 }
 return $x_j^*$ such that $j=\mbox{argmax}_t \, w_t$
@@ -697,7 +746,7 @@ Algorithm: OAT (top) and simultaneous (bottom)
 \end{frame}
 
 
-\begin{frame}
+\begin{frame}[label=current]
 \frametitle{Computational results}
 \begin{tabular}{|l|l|r|r|r|r|r|}
 \hline
@@ -796,7 +845,7 @@ Summary of results:
 \begin{itemize}
 \item Prediction is equivalent to Full GP and simultaneous knot optimization
 \item Formally, OAT has computational complexity of $\mathcal{O}(NK^2)$
-\item Practically, OAT is much faster than Full GP and simultaneous knot optimization
+\item Practically, OAT is much faster than Full GP (on large data sets) and simultaneous knot optimization
 \end{itemize}
 
 \vspace{0.2in} \pause
@@ -812,24 +861,24 @@ Manuscripts:
 
 \transitionslide{Functional inputs}
 
-\begin{frame}
+\begin{frame}[label=current]
 \frametitle{Vector-input Gaussian Process (viGP)}
 
 For observation $i$, we have response $Y_i \in \R$ and
 input $X_i = (X_{i,1},\ldots,X_{i,D})$.
 \pause
-Our computer model is $f()$ with $Y_i = f(X_i)$.
+Our deterministic computer model is $f()$ with $Y_i = f(X_i)$.
 
 \vspace{0.1in} \pause
 
-Assume $f$ is a zero-mean Gaussian process with
-\[ Cov(Y_i,Y_j) = \sigma^2 e^{-\frac{1}{2} D(X_i, X_j, \omega)} \]
+Assume $f$ is a zero-mean Gaussian process such that 
+\[ Cor(Y_i,Y_j) = e^{-\frac{1}{2} D(X_i, X_j, \omega)} \]
 \pause
 and
 \[
 D(X_i, X_j, \omega) = \sum_{d = 1}^{D}{\omega_d (x_{i, d} - x_{j, d})^2}.
 \]
-Some call this \alert{automatic relevance determination}.
+Some refer to this as \alert{automatic relevance determination}.
 \end{frame}
 
 
@@ -840,27 +889,30 @@ Some call this \alert{automatic relevance determination}.
 
 For observation $i$, we have $Y_i \in \R$ and $X_i(t)$ for $t \in [0,T]$.
 \pause
-Our computer model is $f()$ with $Y_i = f(X_i(t))$.
+Our computer model is $f: \mathcal{X} \to \R$ with $Y_i = f(X_i(t))$.
 
 \vspace{0.1in} \pause
 
-The functional-input Gaussian Process has
+Following \cite{morris2012}, the functional-input Gaussian Process has
 
-\[ Cov(Y_i,Y_j) = \sigma^2 e^{-\frac{1}{2} D(X_i(t), X_j(t), \omega)} \]
+\[ Cor(Y_i,Y_j) = e^{-\frac{1}{2} D(X_i(t), X_j(t), \omega)} \]
 \pause
 \[ D(X_i, X_j, \omega) = \int_0^T \omega(t) (X_i(t) - X_j(t))^2 dt \pause
 \approx \sum_{d=1}^D \omega(t_d) (X_i(t_d) - X_j(t_d))^2. \]
 \pause
+
+We'll refer to this as \alert{fiGP} and
+\alert{automatic dynamic relevance determination}.
+
+\pause
+
 For the \alert{functional length-scale},
 we assume
 \[
 \omega(t) = \exp\left( 2 \sigma_\ell^2 t^\eta \right).
 \]
 
-\pause
 
-We'll refer to this as \alert{fiGP} and
-\alert{dynamic automatic relevance determination}.
 
 \end{frame}
 
@@ -876,6 +928,8 @@ We'll refer to this as \alert{fiGP} and
       \end{center}
   \end{figure}
 \end{frame}
+
+
 
 
 
